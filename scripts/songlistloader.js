@@ -1,0 +1,186 @@
+var CLIENT_ID = '68982240764.apps.googleusercontent.com';
+var SCOPES = 'https://www.googleapis.com/auth/drive';
+
+var FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+var DOC_MIME_TYPE = "application/vnd.google-apps.document";
+var LYRICS_FOLDER_ID = "0B15evpzcAcI3ZTRiZTYzMTAtYzVhNS00ZGQ0LWI3YTQtYWNkNDI4ZmM5NmQ1";
+
+var songList;
+var unloadedFolders = [];
+var listLoaded = false;
+
+/**
+ * Called when the client library is loaded to start the auth flow.
+ */
+function handleClientLoad() {
+	window.setTimeout(checkAuth, 1);
+}
+
+/**
+ * Check if the current user has authorized the application.
+ */
+function checkAuth() {
+	gapi.auth.authorize(
+		{'client_id': CLIENT_ID, 'scope': SCOPES, 'immediate': true},
+		handleAuthResult
+	);
+}
+
+/**
+ * Called when authorization server replies.
+ *
+ * @param {Object} authResult Authorization result.
+ */
+function handleAuthResult(authResult) {
+	document.getElementById('authorizeView').style.display = 'none';
+	if (authResult && !authResult.error) {
+		// Access token has been successfully retrieved, requests can be sent to the API
+		gapi.client.load('drive', 'v2', function() {
+			// The page should be loaded by now; set songList.
+			songList = document.getElementById('songList');
+			// Make sure the list container is visible.
+			followHash();
+			if (!listLoaded) {
+				loadFolderContents();
+			}
+		});
+	} else {
+		// No access token could be retrieved, show the button to start the authorization flow.
+		openAuthView();
+	}
+}
+
+/**
+ * Request the list of songs.
+ */
+function loadFolderContents(parentFolderID) {
+	if(!parentFolderID) {
+		parentFolderID = LYRICS_FOLDER_ID;
+	}
+	unloadedFolders.push(parentFolderID);
+	/*var request = gapi.client.drive.files.list({
+		'q': '\'' + parentFolderID + '\' in parents'
+	});
+	request.execute(insertSongs);*/
+	var request = gapi.client.request({
+		'path': '/drive/v2/files',// + LYRICS_FOLDER_ID + '/children',
+		'method': 'GET',
+		'params': {
+			'q': '\'' + parentFolderID + '\' in parents'
+			//'mimeType': 'application/vnd.google-apps.document'
+		},
+		'callback': insertSongs
+	});
+}
+
+/**
+ * Insert the songs into the list.
+ *
+ * @param {Object} jsonResp The response parsed as JSON.  If the response is not JSON, this field will be false.
+ * @param {Object} rawResp The HTTP response.
+ */
+function insertSongs(jsonResp, rawResp) {
+	// Parse the parent folder's ID from the request URL.
+	var parentFolderID = /q='([0-9A-Za-z]+)'/.exec(jsonResp.selfLink)[1];
+	// Get the returned list of items
+	var items = jsonResp.items;
+	items.sort(compareItems);
+	
+	// If this is the content of a lyrics subfolder...
+	if(parentFolderID !== LYRICS_FOLDER_ID) {
+		// Reverse the array (because each item will be added just after the folder's item),
+		items.reverse();
+		// Save a reference to the parent folder's <option>,
+		var parentFolderItem = songList.querySelector('li[id=\"' + parentFolderID + '\"]');
+		// And insert a space that will end up after the folder's contents.
+		var emptyItem = document.createElement('li');
+		parentFolderItem.insertAdjacentElement('afterend', emptyItem);
+	}
+	
+	for(var i = 0; i < items.length; i++) {
+		var newItem = document.createElement('li');
+		if (items[i].mimeType === FOLDER_MIME_TYPE) {
+			newItem.id = items[i].id;
+			newItem.textContent = items[i].title;
+			newItem.innerHTML = '<img src=\"images/folder.png\" alt=\"&#x1f4c2;\" />' + newItem.innerHTML;
+		} else {
+			var newItemBtn = document.createElement('a');
+			newItemBtn.setAttribute('role', 'button');
+			newItemBtn.href = '#' + items[i].id;
+			newItemBtn.textContent = items[i].title;
+			newItem.appendChild(newItemBtn);
+		}
+		
+		if(parentFolderID === LYRICS_FOLDER_ID) {
+			songList.appendChild(newItem);
+		} else {
+			parentFolderItem.insertAdjacentElement('afterend', newItem);
+		}
+		
+		if(items[i].mimeType === FOLDER_MIME_TYPE) {
+			loadFolderContents(items[i].id);
+		}
+	}
+	
+	unloadedFolders.splice(unloadedFolders.indexOf(parentFolderID), 1);
+	if(unloadedFolders.length === 0) {
+		listLoaded = true;
+		makeSearchable();
+	}
+}
+
+/**
+ * Compares items in a Google Drive files.list response for sorting
+ *
+ * @param {Object} a - The first of two items to be compared
+ * @param {Object} b - The second of two items to be compared
+ */
+function compareItems(a, b) {
+	// Folders come before docs.
+	if(a.mimeType === FOLDER_MIME_TYPE && b.mimeType === DOC_MIME_TYPE) {
+		return -1;
+	} else if(a.mimeType === DOC_MIME_TYPE && b.mimeType === FOLDER_MIME_TYPE) {
+		return 1;
+	}
+	// Within each category, sort alphabetically.
+	if(a.title.toUpperCase() < b.title.toUpperCase()) {
+		return -1;
+	} else if(a.title.toUpperCase() > b.title.toUpperCase()) {
+		return 1;
+	}
+	// If they are equal (which should not happen)...
+	return 0;
+}
+
+/**
+ * Make the song list searchable.
+ */
+function makeSearchable() {
+	var songSearchBox = document.getElementById('songSearchBox');
+	
+	songSearchBox.addEventListener('input', function (e) {
+		var query = e.target.value.toLowerCase();
+		query = query.replace(/  /g, ''); // Remove extra spaces.
+		query = query.trim(); // Remove trailing whitespace.
+		query = query.split(' '); // Split terms.
+		var listItems = songList.getElementsByTagName('li');
+		var i, j, foundIt;
+		for (i = 0; i < listItems.length; i++) {
+			foundIt = true;
+			for (j = 0; j < query.length; j++) {
+				if (query !== '' && listItems[i].textContent.toLowerCase().indexOf(query[j]) === -1) {
+					foundIt = false;
+					break;
+				}
+			}
+			if (foundIt) {
+				listItems[i].style.display = 'block';
+				listItems[i].style.display = 'list-item';
+			} else {
+				listItems[i].style.display = 'none';
+			}
+		}
+	}, false);
+	
+	songSearchBox.disabled = false;
+}

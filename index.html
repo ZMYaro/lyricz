@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+	This code is largely awful.  I do not recommend using it as a reference.
+-->
+<html>
+	<head>
+		<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+		
+		<title>LyricZ</title>
+		
+		<link rel="stylesheet" type="text/css" href="styles/holo-web/holo-base-elements.css" />
+		<link rel="stylesheet" type="text/css" href="styles/holo-web/holo-base-widgets.css" />
+		<link rel="stylesheet" type="text/css" href="styles/holo-web/holo-ics-light-elements.css" />
+		<link rel="stylesheet" type="text/css" href="styles/holo-web/holo-ics-light-widgets.css" />
+		<!--
+		<link rel="stylesheet" type="text/css" href="styles/holo-web/holo-kk-light-elements.css" />
+		<link rel="stylesheet" type="text/css" href="styles/holo-web/holo-kk-light-widgets.css" />
+		-->
+		
+		<link rel="stylesheet" type="text/css" href="styles/list.css" />
+		
+		<script type="text/javascript" src="scripts/viewmanager.js"></script>
+		<script type="text/javascript" src="scripts/songlistloader.js"></script>
+		<script type="text/javascript" src="scripts/songloader.js"></script>
+		<script type="text/javascript" src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+	</head>
+	<body>
+		<div class="view" id="authorizeView" style="display: none;">
+			<header class="holo-actionBar">
+				<a role="button" href="#" class="holo-title holo-up">Settings</a>
+			</header>
+			<p style="margin: 8px 0;">
+				Before this app will work, you must add <a href="https://drive.google.com/folderview?id=0B15evpzcAcI3ZTRiZTYzMTAtYzVhNS00ZGQ0LWI3YTQtYWNkNDI4ZmM5NmQ1&usp=drive_web" target="_blank">this folder</a> to your Google Drive.  Then authorize the app to access that folder using the button below.
+			</p>
+			<p style="text-align: center; margin: 8px 0;">
+				<button id="authorizeButton">Authorize</button>
+			</p>
+		</div>
+		<div class="view" id="listView" style="display: none;">
+			<header class="holo-actionBar">
+				<a role="button" href="#settings" style="float: right;"><img src="images/settings.png" alt="Settings" style="margin: 0;" /></a>
+				<input type="search" id="songSearchBox" placeholder="Search for a song" disabled="disabled" />
+				<h1 id="title" class="holo-title">LyricZ</h1>
+			</header>
+			<small>
+				By Zachary Yaro
+				-
+				Powered by Google Drive
+			</small>
+			<ol id="songList" class="holo-list"></ol>
+		</div>
+		<div class="view" id="lyricsView" style="display: none;">
+			<header class="holo-actionBar">
+				<a role="button" href="#" id="upBtn" class="holo-title holo-up"></a>
+			</header>
+			<div id="lyrics"></div>
+		</div>
+	</body>
+</html>
