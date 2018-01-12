@@ -1,39 +1,45 @@
-var CLIENT_ID = '68982240764.apps.googleusercontent.com';
-var SCOPES = 'https://www.googleapis.com/auth/drive';
+var CLIENT_ID = '68982240764.apps.googleusercontent.com',
+	API_KEY = 'AIzaSyCdRTdFjiJr2-dz55pLOfml3DOQJNbJL14',
+	SCOPES = 'https://www.googleapis.com/auth/drive',
 
-var FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
-var DOC_MIME_TYPE = "application/vnd.google-apps.document";
-var LYRICS_FOLDER_ID = "0B15evpzcAcI3ZTRiZTYzMTAtYzVhNS00ZGQ0LWI3YTQtYWNkNDI4ZmM5NmQ1";
+	FOLDER_MIME_TYPE = "application/vnd.google-apps.folder",
+	DOC_MIME_TYPE = "application/vnd.google-apps.document",
+	LYRICS_FOLDER_ID = "0B15evpzcAcI3ZTRiZTYzMTAtYzVhNS00ZGQ0LWI3YTQtYWNkNDI4ZmM5NmQ1";
 
-var songList;
-var unloadedFolders = [];
-var listLoaded = false;
+var songList,
+	unloadedFolders = [],
+	listLoaded = false;
 
 /**
  * Called when the client library is loaded to start the auth flow.
  */
 function handleClientLoad() {
-	window.setTimeout(checkAuth, 1);
+	gapi.load('client:auth2', checkAuth);
 }
 
 /**
  * Check if the current user has authorized the application.
  */
-function checkAuth() {
-	gapi.auth.authorize(
-		{'client_id': CLIENT_ID, 'scope': SCOPES, 'immediate': true},
-		handleAuthResult
-	);
+async function checkAuth() {
+	gapi.client.init({
+		apiKey: API_KEY,
+		clientId: CLIENT_ID,
+		scope: SCOPES
+	}).then(function () {
+		gapi.auth2.getAuthInstance().isSignedIn.listen(handleAuthResult);
+		
+		handleAuthResult(gapi.auth2.getAuthInstance().isSignedIn.get());
+	});
 }
 
 /**
  * Called when authorization server replies.
  *
- * @param {Object} authResult Authorization result.
+ * @param {Boolean} isSignedIn - Whether the user is signed in
  */
-function handleAuthResult(authResult) {
+function handleAuthResult(isSignedIn) {
 	document.getElementById('authorizeView').style.display = 'none';
-	if (authResult && !authResult.error) {
+	if (isSignedIn) {
 		// Access token has been successfully retrieved, requests can be sent to the API
 		gapi.client.load('drive', 'v2', function() {
 			// The page should be loaded by now; set songList.
@@ -58,32 +64,23 @@ function loadFolderContents(parentFolderID) {
 		parentFolderID = LYRICS_FOLDER_ID;
 	}
 	unloadedFolders.push(parentFolderID);
-	/*var request = gapi.client.drive.files.list({
+	
+	gapi.client.drive.files.list({
+		pageSize: 1000,
 		'q': '\'' + parentFolderID + '\' in parents'
-	});
-	request.execute(insertSongs);*/
-	var request = gapi.client.request({
-		'path': '/drive/v2/files',// + LYRICS_FOLDER_ID + '/children',
-		'method': 'GET',
-		'params': {
-			'q': '\'' + parentFolderID + '\' in parents'
-			//'mimeType': 'application/vnd.google-apps.document'
-		},
-		'callback': insertSongs
-	});
+	}).then(insertSongs);
 }
 
 /**
  * Insert the songs into the list.
  *
- * @param {Object} jsonResp The response parsed as JSON.  If the response is not JSON, this field will be false.
- * @param {Object} rawResp The HTTP response.
+ * @param {Object} res - The response from the folder list request
  */
-function insertSongs(jsonResp, rawResp) {
+function insertSongs(res) {
 	// Parse the parent folder's ID from the request URL.
-	var parentFolderID = /q='([0-9A-Za-z]+)'/.exec(jsonResp.selfLink)[1];
+	var parentFolderID = /q='([0-9A-Za-z]+)'/.exec(res.result.selfLink)[1];
 	// Get the returned list of items
-	var items = jsonResp.items;
+	var items = res.result.items;
 	items.sort(compareItems);
 	
 	// If this is the content of a lyrics subfolder...
