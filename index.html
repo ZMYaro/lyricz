@@ -23,7 +23,6 @@
 		<script type="text/javascript" src="scripts/viewmanager.js"></script>
 		<script type="text/javascript" src="scripts/songlistloader.js"></script>
 		<script type="text/javascript" src="scripts/songloader.js"></script>
-		<script type="text/javascript" src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
 	</head>
 	<body>
 		<div class="view" id="authorizeView" style="display: none;">
@@ -56,5 +55,9 @@
 			</header>
 			<div id="lyrics"></div>
 		</div>
+		<script async defer src="https://apis.google.com/js/api.js"
+			onload="this.onload=function(){};handleClientLoad()"
+			onreadystatechange="if (this.readyState === 'complete') this.onload()">
+		</script>
 	</body>
 </html>

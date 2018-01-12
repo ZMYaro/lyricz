@@ -12,10 +12,7 @@ function openLyricsView() {
 
 function openAuthView() {
 	document.getElementById('authorizeButton').onclick = function() {
-			gapi.auth.authorize(
-				{'client_id': CLIENT_ID, 'scope': SCOPES, 'immediate': false},
-				handleAuthResult
-			);
+		gapi.auth2.getAuthInstance().signIn();
 	};
 	document.getElementById('listView').style.display = 'none';
 	document.getElementById('lyricsView').style.display = 'none';
