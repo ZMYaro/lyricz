@@ -20,7 +20,7 @@ function handleClientLoad() {
 /**
  * Check if the current user has authorized the application.
  */
-async function checkAuth() {
+function checkAuth() {
 	gapi.client.init({
 		apiKey: API_KEY,
 		clientId: CLIENT_ID,
